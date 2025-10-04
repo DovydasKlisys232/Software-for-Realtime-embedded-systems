@@ -22,4 +22,4 @@ hello.hex: hello.elf
 	avr-objcopy -O ihex hello.elf hello.hex
 
 hello_upload:
-	avrdude -c stk500v2 -p m328p -P /dev/ttyACM0 -U hello.hex
+	avrdude -c stk500v2 -p m328p -P COM10 -U hello.hex

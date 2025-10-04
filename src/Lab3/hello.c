@@ -1,4 +1,4 @@
-#define F_CPU 1000000UL  // 1MHz for your RAW AVR board
+#define F_CPU 1000000UL
 
 #include <avr/io.h>
 #include <util/delay.h>
@@ -6,18 +6,22 @@
 
 int main(void)
 {
-    // Initialize USART for serial communication
+    // Optional: Set up an LED for visual feedback
+    DDRB |= (1 << 5);  // Arduino Uno LED on pin 13
+    
     usartInit();
     
-    // Main loop
+    // Blink LED to confirm program is running
+    PORTB |= (1 << 5);
+    _delay_ms(1000);
+    PORTB &= ~(1 << 5);
+    
     while(1)
     {
-        // Send "Hello World" string
+        PORTB |= (1 << 5);  // LED on during transmit
         usartSendString("Hello World\r\n");
-        
-        // Delay for 1 second (1000ms)
+        PORTB &= ~(1 << 5);  // LED off after transmit
         _delay_ms(1000);
     }
-    
     return 0;
 }
