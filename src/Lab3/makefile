@@ -1,5 +1,5 @@
 #execute all steps to uploading hello.c into an arduino
-all: hello.o usart.o  hello.elf hello.hex 
+all: hello.o usart.o  hello.elf hello.hex hello_upload
 
 #removes all projects of a certain type
 clean: 
@@ -21,3 +21,5 @@ hello.elf: hello.o
 hello.hex: hello.elf
 	avr-objcopy -O ihex hello.elf hello.hex
 
+hello_upload:
+	avrdude -c stk500v2 -p m328p -P /dev/ttyACM0 -U hello.hex
