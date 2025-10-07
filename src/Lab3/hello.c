@@ -6,10 +6,9 @@
 
 int main(void)
 {
-    // Optional: Set up an LED for visual feedback
-    DDRB |= (1 << 5);  // Arduino Uno LED on pin 13
+    DDRB |= (1 << 5);  //set pin pb5 as output
     
-    usartInit();
+    usartInit();	//initialize usart
     
     // Blink LED to confirm program is running
     PORTB |= (1 << 5);
