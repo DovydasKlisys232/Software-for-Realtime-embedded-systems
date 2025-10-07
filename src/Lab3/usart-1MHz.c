@@ -16,6 +16,8 @@ void usartInit(void)
 
 	UBRR0 = 12;  //1Mhz - RAW AVR board
 	UCSR0A |= (1<<U2X0);
+
+	UCSR0C = (1<<UCSZ01) | (1<<UCSZ00);  // 8-bit characters
 }
 
 void usartEnableRxInt(void)
