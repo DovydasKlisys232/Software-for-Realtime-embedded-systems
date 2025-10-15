@@ -1,5 +1,5 @@
 #execute all steps to uploading timer.c into an arduino
-all: timer.o usart.o timer.elf timer.hex timer_upload
+all: timer.o usart.o setup.o timer.elf timer.hex timer_upload
 
 #removes all projects of a certain type
 clean: 
@@ -13,9 +13,13 @@ timer.o: timer.c
 usart.o: usart-1MHz.c
 	avr-gcc -c -mmcu=atmega328p -O2 -o usart.o usart-1MHz.c
 
+#making the object code for setup.c
+setup.o: setup.c
+	avr-gcc -c -mmcu=atmega328p -O2 -o setup.o setup.c	
+
 #linking both timer.o and usart.o to make timer.elf
 timer.elf: timer.o 
-	avr-gcc -mmcu=atmega328p -O2 -o timer.elf timer.o usart.o
+	avr-gcc -mmcu=atmega328p -O2 -o timer.elf timer.o usart.o setup.o
 
 #creating machine code from timer.elf
 timer.hex: timer.elf
