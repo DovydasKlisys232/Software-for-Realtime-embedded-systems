@@ -1,5 +1,5 @@
 #execute all steps to uploading False_alarm.c into an arduino
-all1: False_alarm.o usart.o False_alarm.elf False_alarm.hex False_alarm_upload
+all1: False_alarm.o False_alarm.elf False_alarm.hex False_alarm_upload
 
 #removes all projects of a certain type
 clean: 
@@ -9,13 +9,9 @@ clean:
 False_alarm.o: False_alarm.c
 	avr-gcc -c -mmcu=atmega328p -O2 -o False_alarm.o False_alarm.c
 
-#making the object code for usart-1MHz.c
-usart.o: usart-1MHz.c
-	avr-gcc -c -mmcu=atmega328p -O2 -o usart.o usart-1MHz.c
-
 #linking both False_alarm.o and usart.o to make False_alarm.elf
 False_alarm.elf: False_alarm.o 
-	avr-gcc -mmcu=atmega328p -O2 -o False_alarm.elf False_alarm.o usart.o
+	avr-gcc -mmcu=atmega328p -O2 -o False_alarm.elf False_alarm.o
 
 #creating machine code from False_alarm.elf
 False_alarm.hex: False_alarm.elf
@@ -26,10 +22,6 @@ False_alarm_upload:
 
 #execute all steps to uploading False_alarm.c into an arduino
 all2: fixed.o usart.o fixed.elf fixed.hex fixed_upload
-
-#removes all projects of a certain type
-clean: 
-	rm ./*.o ./*.elf ./*.hex
 
 #making the object code for fixed.c
 fixed.o: fixed.c
