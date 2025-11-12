@@ -10,7 +10,14 @@ int main(void){
 
 	while(1)
 	{
-		PORTB ^= (1 << 2);
+		PORTB |= (1 << 2);
+#ifndef DEBUG
+		_delay_ms(500);
+#endif
+		PORTB &= ~(1 << 2);
+#ifndef DEBUG
+		_delay_ms(500);
+#endif
 	}
 	return 0;
 }
