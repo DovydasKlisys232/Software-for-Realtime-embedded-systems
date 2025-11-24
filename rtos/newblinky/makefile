@@ -91,7 +91,7 @@ program:
 	$(AVRDUDE) $(AVRDUDE_FLAGS) $(AVRDUDE_WRITE_FLASH)
 
 # Upload to device
-upload: $(HEX)
+upload: $(TARGET)
 	$(UPLOAD) flash:w:$(TARGET).hex:i
 
 clean:
