@@ -33,7 +33,7 @@ SemaphoreHandle_t tempSem; // accessed by both tasks
 ISR(INT0_vect)
 {
 	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-	xSemaphoreGiveFromISR(tempSem);
+	xSemaphoreGiveFromISR(tempSem, xHigherPriorityTaskWoken);
 	portYIELD_FROM_ISR();
 }
 
@@ -75,7 +75,7 @@ static void TaskReadTemp(void *pvParameters) // LED Flash
 		sprintf(str2, "Freq: %u\r\n", iTemperatures[1]);
         usartSendString(str2);
         
-		xSemaphoreGive(tempSem);
+		xSemaphoreGive(tempSem, xHigherPriorityTaskWoken);
 		
 		PORTB ^= (1<<0);
 		
@@ -98,7 +98,7 @@ static void TaskAlarm(void *pvParameters) // LED Flash
 		vTaskDelay( 550 / portTICK_PERIOD_MS );
 		temp2 = iTemperatures[1];
 
-		xSemaphoreGive(tempSem);
+		xSemaphoreGive(tempSem, xHigherPriorityTaskWoken);
 
 
 		if(temp1 != temp2)
