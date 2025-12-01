@@ -50,7 +50,8 @@ FREERTOS_SRC  :=  \
 	$(FREERTOS_DIR)/hooks.c \
 	$(FREERTOS_DIR)/port.c \
 	$(FREERTOS_DIR)/queue.c \
-	$(FREERTOS_DIR)/tasks.c
+	$(FREERTOS_DIR)/tasks.c \
+	$(FREERTOS_DIR)/usart-1MHz.c
 
 
 SOURCES :=	$(FREERTOS_SRC) \
