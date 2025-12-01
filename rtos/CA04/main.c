@@ -35,6 +35,7 @@ void interrupt_init();
 ISR(INT0_vect)
 {
 	xSemaphoreGiveFromISR(tempSem, NULL);
+	portYIELD_FROM_ISR();
 }
 
 int main(void)
@@ -46,7 +47,6 @@ int main(void)
 
 	//create semaphore
 	tempSem = xSemaphoreCreateBinary();
-	xSemaphoreGive(tempSem);
 	
    	xTaskCreate(TaskReadTemp, NULL, 256, NULL, 3, NULL);
 	xTaskCreate(TaskAlarm, NULL, 256, NULL, 2, NULL);
