@@ -32,9 +32,7 @@ SemaphoreHandle_t tempSem; // accessed by both tasks
 // if the waiting task is higher priority than the running task the isr will switch tasks
 ISR(INT0_vect)
 {
-	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-	xSemaphoreGiveFromISR(tempSem, xHigherPriorityTaskWoken);
-	portYIELD_FROM_ISR();
+	xSemaphoreGiveFromISR(tempSem, NULL);
 }
 
 int main(void)
@@ -65,7 +63,7 @@ static void TaskReadTemp(void *pvParameters) // LED Flash
 	
 	while(1)
 	{
-		xSemaphoreTakeFromISR( tempSem, portMAX_DELAY); //have semaphore available forever
+		xSemaphoreTake( tempSem, portMAX_DELAY); //have semaphore available forever
 		
 		iTemperatures[0]++;
 		sprintf(str1, "Temp1: %u\r\n", iTemperatures[0]);
@@ -92,7 +90,7 @@ static void TaskAlarm(void *pvParameters) // LED Flash
 
  	while(1)
  	{
-		xSemaphoreTakeFromISR( tempSem, portMAX_DELAY); //have semaphore available forever
+		xSemaphoreTake( tempSem, portMAX_DELAY); //have semaphore available forever
  	
 		temp1 = iTemperatures[0];
 		vTaskDelay( 550 / portTICK_PERIOD_MS );
