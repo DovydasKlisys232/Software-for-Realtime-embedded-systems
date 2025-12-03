@@ -13,10 +13,9 @@ which gives the semaphore to a specific task when interrupt occurs.
 #include "FreeRTOS.h"
 #include "task.h"
 #include "semphr.h"
-#include "usart.h"
+#include "usart.h" //usart library for serial comms
 
-#include <util/delay.h>
-#include<avr/interrupt.h>
+#include<avr/interrupt.h> //for ISR
 #include<stdio.h> //for sprintf
 
 /*-----------------------------------------------------------*/
@@ -25,17 +24,20 @@ static void TaskAlarm(void *pvParameters);
 /*-----------------------------------------------------------*/
 
 /*-----------------------------------------------------------*/
+// i have an array to store the two temperature values. this is a global variable which can cause race conditions
+// using a semaphore to protect access to this variable
+// i have two semaphores, one for the increment task and one for the alarm task
 uint8_t iTemperatures[2] = {0}; 
-SemaphoreHandle_t tempSem; // accessed by both tasks
+SemaphoreHandle_t incrementSem; // accessed by both tasks
+SemaphoreHandle_t alarmSem; // accessed by both tasks
+SemaphoreHandle_t usartmutex; // to protect usart access 
 /*-----------------------------------------------------------*/
 void interrupt_init();
 
-// this isr gives a semaphore to a task
-// if the waiting task is higher priority than the running task the isr will switch tasks
+// this isr gives a semaphore to a task when an interrupt occurs on pd2
 ISR(INT0_vect)
 {
-	xSemaphoreGiveFromISR(tempSem, NULL);
-	portYIELD_FROM_ISR();
+	xSemaphoreGiveFromISR(incrementSem, NULL);
 }
 
 int main(void)
@@ -45,8 +47,14 @@ int main(void)
 	interrupt_init();
 	sei();
 
-	//create semaphore
-	tempSem = xSemaphoreCreateBinary();
+	//create semaphores
+	incrementSem = xSemaphoreCreateBinary();
+	alarmSem = xSemaphoreCreateBinary();
+	usartmutex = xSemaphoreCreateMutex();
+
+	//make semaphore available at start. this ensures the low priority task can run first
+	xSemaphoreGive(alarmSem); 
+	xSemaphoreGive(usartmutex);
 	
    	xTaskCreate(TaskReadTemp, NULL, 256, NULL, 3, NULL);
 	xTaskCreate(TaskAlarm, NULL, 256, NULL, 2, NULL);
@@ -58,49 +66,55 @@ int main(void)
 
 static void TaskReadTemp(void *pvParameters) // LED Flash
 {
-
+	//setup
 	DDRB |= (1<<0);	
 	char str1[20];
 	char str2[20];
 	
 	while(1)
 	{
-		xSemaphoreTake( tempSem, portMAX_DELAY); //have semaphore available forever
+		xSemaphoreTake( incrementSem, portMAX_DELAY); //have semaphore available forever
+		//if first take fails it is blocked, even if there is another take after
+		xSemaphoreTake( alarmSem, portMAX_DELAY); //blocks low priority task if high priority task has the semaphore
 		
 		iTemperatures[0]++;
+		iTemperatures[1]++;
+
+		//printing out temperature values
+		//using mutex to protect usart access
+		xSemaphoreTake(usartmutex, portMAX_DELAY);
 		sprintf(str1, "Temp1: %u\r\n", iTemperatures[0]);
 		usartSendString(str1);
-		
-		iTemperatures[1]++;
-		sprintf(str2, "Freq: %u\r\n", iTemperatures[1]);
+		sprintf(str2, "Temp2: %u\r\n", iTemperatures[1]);
         usartSendString(str2);
-        
-		xSemaphoreGive(tempSem);
+		xSemaphoreGive(usartmutex);
 		
 		PORTB ^= (1<<0);
+
+		xSemaphoreGive(alarmSem);
 		
-		vTaskDelay( 123 / portTICK_PERIOD_MS );
+		vTaskDelay( 50 / portTICK_PERIOD_MS );
 	}
 }
 
 static void TaskAlarm(void *pvParameters) // LED Flash
 {
+	//setup
 	uint8_t temp1, temp2;
 
 	DDRB |= (1<<2);
+	
 	char str[20];
 
  	while(1)
  	{
-		xSemaphoreTake( tempSem, portMAX_DELAY); //have semaphore available forever
- 	
+		xSemaphoreTake( alarmSem, portMAX_DELAY); //have semaphore available forever
 		temp1 = iTemperatures[0];
-		vTaskDelay( 550 / portTICK_PERIOD_MS );
 		temp2 = iTemperatures[1];
+		xSemaphoreGive(alarmSem);
 
-		xSemaphoreGive(tempSem);
-
-
+		//using mutex to protect usart access
+		xSemaphoreTake(usartmutex, portMAX_DELAY);
 		if(temp1 != temp2)
 		{
 			PORTB |=  (1<<2); //LED on
@@ -113,7 +127,8 @@ static void TaskAlarm(void *pvParameters) // LED Flash
 			sprintf(str, "Alarm off\r\n");
 	        usartSendString(str);
 		}
-		
+		xSemaphoreGive(usartmutex);
+	
  		vTaskDelay( 200 / portTICK_PERIOD_MS );
  	}
 }
