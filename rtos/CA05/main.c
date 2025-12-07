@@ -21,23 +21,146 @@ specified in the end of the video.
 static void printTask(void *pvParameters); 
 static void LEDTask(void *pvParameters);
 /*-----------------------------------------------------------*/
-
+void ledblink(int blink_count, char* str1);
 /*-----------------------------------------------------------*/
 // Globals
 static QueueHandle_t delay_queue;
 static QueueHandle_t msg_queue;
+
+static const msg_queue_len = 5;
+static const int delay_queue_len = 5; 
+
+typedef struct Message {
+  char body[20];
+  int count;
+} Message;
 /*-----------------------------------------------------------*/
 
 
 int main(void)
 {
-	//setup usart and enable interrupts
+	//setup usart 
 	usartInit();
 	
+	//create queues
+	delay_queue = xQueueCreate(delay_queue_len, sizeof(int)); //queue to hold delay times
+	msg_queue = xQueueCreate(msg_queue_len, sizeof(int)); //queue to hold messages
+
    	xTaskCreate(printTask, NULL, 256, NULL, 1, NULL);
 	xTaskCreate(LEDTask, NULL, 256, NULL, 1, NULL);
 		
 	vTaskStartScheduler();    //This never returns... control handed to the RTOS
 }
 
+static void printTask(void *pvParameters) // print to the terminal
+{
+	//setup
+	Message rcv_msg;
+	int t;
+	char ch;
+	char buf[buf_len];
+	uint8_t idx = 0;
+	uint8_t cmd_len = strlen(command);
+
+	// Clear whole buffer
+  	memset(buf, 0, buf_len);	
+	
+	while(1)
+	{
+		//read messages from msg_queue
+		if (xQueueReceive(msg_queue, (void *)&rcv_msg, portMAX_DELAY) == pdTRUE) {
+			usartSendString(rcv_msg.body);
+		}
+
+		if(usartCharReceived())
+		{
+			ch = usartReadChar(); //read char from usart
+			if(ch >= '1' && ch <= '10000') //max range of delay times inputted in terminal
+			{
+				t = (ch - '0') * 100; //convert char to int and multiply by 100ms
+				xQueueSend(delay_queue, (void *)&t, portMAX_DELAY);
+			}
+			usartSendChar(ch); //echo back to terminal
+
+			// Store received character to buffer if not over buffer limit
+			if (idx < buf_len - 1) {
+				buf[idx] = ch;
+				idx++ ;
+			}
+
+			// Print newline and check input on 'enter'
+			if ((c == '\n') || (c == '\r')) {
+
+				// Print newline to terminal
+				Serial.print("\r\n");
+
+				// Check if the first 6 characters are "delay "
+				if (memcmp(buf, command, cmd_len) == 0) {
+
+				// Convert last part to positive integer (negative int crashes)
+				char* tail = buf   cmd_len;
+				led_delay = atoi(tail);
+				led_delay = abs(led_delay);
+
+				// Send integer to other task via queue
+				if (xQueueSend(delay_queue, (void *)&led_delay, 10) != pdTRUE) {
+					Serial.println("ERROR: Could not put item on delay queue.");
+				}
+				}
+
+				// Reset receive buffer and index counter
+				memset(buf, 0, buf_len);
+				idx = 0;
+
+			// Otherwise, echo character back to serial terminal
+			} else {
+				Serial.print(c);
+			}
+		} 
+	}
+		
+	vTaskDelay( 50 / portTICK_PERIOD_MS );
+	
+}
+
+static void LEDTask(void *pvParameters) // print to the terminal
+{
+	//setup
+	DDRB |= (1<<2);	
+	int t = 500; //initial delay time
+	message msg;
+	msg.count = 0;
+	
+	while(1)
+	{
+		// See if there's a message in the queue (do not block)
+		if (xQueueReceive(delay_queue, (void *)&t, 0) == pdTRUE) {
+			// Best practice: use only one task to manage serial comms
+			sprintf(msg.body, "message received\r\n");
+			msg.count = 1;
+			xQueueSend(msg_queue, (void *)&msg, 10);
+		}
+
+		xQueueReceive(delay_queue, &t, portMAX_DELAY);
+		ledblink(msg, t);
+	}
+}
+
 /*-----------------------------------------------------------*/
+// function that tracks the number of blinks and prints to usart every 100 blinks
+void ledblink(message msg,int counter int delay)
+{
+	PORTB |=  (1<<2); //LED on
+	vTaskDelay( delay / portTICK_PERIOD_MS );
+	PORTB &= ~(1<<2); //LED off
+	vTaskDelay( delay / portTICK_PERIOD_MS );
+	counter++;
+	//every 100 blinks send message to delay_queue
+	if(counter == 100)
+	{
+		msg.count++;
+		sprintf(msg.body, "blinked\r\n");
+		xQueueSend(msg_queue, (void *)&msg, portMAX_DELAY);
+		counter = 0;
+	}
+}
