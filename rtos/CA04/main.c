@@ -80,6 +80,8 @@ static void TaskReadTemp(void *pvParameters) // LED Flash
 		iTemperatures[0]++;
 		iTemperatures[1]++;
 
+		xSemaphoreGive(alarmSem);
+
 		//printing out temperature values
 		//using mutex to protect usart access
 		xSemaphoreTake(usartmutex, portMAX_DELAY);
@@ -90,8 +92,6 @@ static void TaskReadTemp(void *pvParameters) // LED Flash
 		xSemaphoreGive(usartmutex);
 		
 		PORTB ^= (1<<0);
-
-		xSemaphoreGive(alarmSem);
 		
 		vTaskDelay( 50 / portTICK_PERIOD_MS );
 	}
