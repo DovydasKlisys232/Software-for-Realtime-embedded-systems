@@ -29,6 +29,8 @@ static QueueHandle_t msg_queue;
 
 static const msg_queue_len = 5;
 static const int delay_queue_len = 5; 
+static const uint8_t buf_len = 255; //length of buffer to store user input
+static const char command[] = "delay ";; //store delay command string from user for parsing later
 
 typedef struct Message {
   char body[20];
@@ -58,7 +60,7 @@ static void printTask(void *pvParameters) // print to the terminal
 	Message rcv_msg;
 	int t;
 	char ch;
-	char buf[buf_len];
+	char userinput[buf_len];
 	uint8_t idx = 0;
 	uint8_t cmd_len = strlen(command);
 
@@ -68,52 +70,57 @@ static void printTask(void *pvParameters) // print to the terminal
 	while(1)
 	{
 		//read messages from msg_queue
-		if (xQueueReceive(msg_queue, (void *)&rcv_msg, portMAX_DELAY) == pdTRUE) {
+		if (xQueueReceive(msg_queue, &rcv_msg, portMAX_DELAY) == pdTRUE) {
 			usartSendString(rcv_msg.body);
+			usartSendString("\n");
+			usartSendString(rcv_msg.count);
+			usartSendString("\n");
 		}
 
 		if(usartCharReceived())
 		{
 			ch = usartReadChar(); //read char from usart
+			
 			if(ch >= '1' && ch <= '10000') //max range of delay times inputted in terminal
 			{
 				t = (ch - '0') * 100; //convert char to int and multiply by 100ms
-				xQueueSend(delay_queue, (void *)&t, portMAX_DELAY);
+				xQueueSend(delay_queue, &t, portMAX_DELAY);
 			}
+
 			usartSendChar(ch); //echo back to terminal
 
 			// Store received character to buffer if not over buffer limit
 			if (idx < buf_len - 1) {
-				buf[idx] = ch;
+				userinput[idx] = ch;
 				idx++ ;
 			}
 
 			// Print newline and check input on 'enter'
-			if ((c == '\n') || (c == '\r')) {
+			if ((ch == '\n') || (ch == '\r')) {
 
 				// Print newline to terminal
-				Serial.print("\r\n");
+				usartSendString("\r\n");
 
 				// Check if the first 6 characters are "delay "
 				if (memcmp(buf, command, cmd_len) == 0) {
+					// Convert last part to positive integer (negative int crashes)
+					char* tail = userinput + cmd_len;
+					t = atoi(tail);
+					t = abs(t);
 
-				// Convert last part to positive integer (negative int crashes)
-				char* tail = buf   cmd_len;
-				led_delay = atoi(tail);
-				led_delay = abs(led_delay);
-
-				// Send integer to other task via queue
-				if (xQueueSend(delay_queue, (void *)&led_delay, 10) != pdTRUE) {
-					Serial.println("ERROR: Could not put item on delay queue.");
-				}
+					// Send integer to other task via queue
+					if (xQueueSend(delay_queue, &t, 10) != pdTRUE) {
+						usartSendString("ERROR: Could not put item on delay queue.");
+					}
 				}
 
 				// Reset receive buffer and index counter
 				memset(buf, 0, buf_len);
 				idx = 0;
 
+			} 
 			// Otherwise, echo character back to serial terminal
-			} else {
+			else {
 				Serial.print(c);
 			}
 		} 
@@ -129,19 +136,18 @@ static void LEDTask(void *pvParameters) // print to the terminal
 	DDRB |= (1<<2);	
 	int t = 500; //initial delay time
 	message msg;
-	msg.count = 0;
+	int counter = 0;
 	
 	while(1)
 	{
 		// See if there's a message in the queue (do not block)
-		if (xQueueReceive(delay_queue, (void *)&t, 0) == pdTRUE) {
+		if (xQueueReceive(delay_queue, &t, 0) == pdTRUE) {
 			// Best practice: use only one task to manage serial comms
 			sprintf(msg.body, "message received\r\n");
 			msg.count = 1;
-			xQueueSend(msg_queue, (void *)&msg, 10);
+			xQueueSend(msg_queue, &msg, 10);
 		}
-
-		xQueueReceive(delay_queue, &t, portMAX_DELAY);
+		//blink led with delay time t
 		ledblink(msg, t);
 	}
 }
@@ -158,9 +164,9 @@ void ledblink(message msg,int counter int delay)
 	//every 100 blinks send message to delay_queue
 	if(counter == 100)
 	{
-		msg.count++;
-		sprintf(msg.body, "blinked\r\n");
-		xQueueSend(msg_queue, (void *)&msg, portMAX_DELAY);
+		msg.count = counter;
+		sprintf(msg.body, "blinked: \r\n");
+		xQueueSend(msg_queue, &msg, portMAX_DELAY);
 		counter = 0;
 	}
 }
