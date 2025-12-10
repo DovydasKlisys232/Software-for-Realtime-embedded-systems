@@ -104,6 +104,8 @@ static void printTask(void *pvParameters) // print to the terminal
 					char* tail = userinput + cmd_len;
 					t = atoi(tail);
 					t = abs(t);
+					sprintf(str, "Setting delay to %d ms\r\n", t);
+					usartSendString(str);
 
 					// Send integer to other task via queue
 					if (xQueueSend(delay_queue, &t, 10) != pdTRUE) {
