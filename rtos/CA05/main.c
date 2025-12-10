@@ -75,7 +75,7 @@ static void printTask(void *pvParameters) // print to the terminal
 	while(1)
 	{
 		//read messages from msg_queue
-		if (xQueueReceive(msg_queue, &rcv_msg, portMAX_DELAY) == pdTRUE) {
+		if (xQueueReceive(msg_queue, &rcv_msg, 0) == pdTRUE) {
 			usartSendString(rcv_msg.body);
 			usartSendString("\n");
 			sprintf(str, "%d\r\n", rcv_msg.count);
@@ -85,6 +85,7 @@ static void printTask(void *pvParameters) // print to the terminal
 		if(usartCharReceived())
 		{
 			ch = usartReadChar(); //read char from usart
+			usartSendString("all good so far\r\n");
 
 			// Store received character to buffer if not over buffer limit
 			if (idx < buf_len - 1) {
@@ -104,15 +105,12 @@ static void printTask(void *pvParameters) // print to the terminal
 					char* tail = userinput + cmd_len;
 					t = atoi(tail);
 					t = abs(t);
-					sprintf(str, "Setting delay to %d ms\r\n", t);
-					usartSendString(str);
 
 					// Send integer to other task via queue
 					if (xQueueSend(delay_queue, &t, 10) != pdTRUE) {
 						usartSendString("ERROR: Could not put item on delay queue.");
 					}
 				}
-
 				// Reset receive buffer and index counter
 				memset(userinput, 0, buf_len);
 				idx = 0;
@@ -124,8 +122,6 @@ static void printTask(void *pvParameters) // print to the terminal
 			}
 		} 
 	}
-		
-	vTaskDelay( 50 / portTICK_PERIOD_MS );
 	
 }
 
@@ -141,7 +137,6 @@ static void LEDTask(void *pvParameters) // print to the terminal
 	{
 		// See if there's a message in the queue (do not block)
 		if (xQueueReceive(delay_queue, &t, 0) == pdTRUE) {
-			// Best practice: use only one task to manage serial comms
 			sprintf(msg.body, "message received\r\n");
 			msg.count = 1;
 			xQueueSend(msg_queue, &msg, 10);
