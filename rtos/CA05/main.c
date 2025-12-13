@@ -74,6 +74,7 @@ static void printTask(void *pvParameters) // print to the terminal
 	
 	while(1)
 	{
+		
 		//read messages from msg_queue (outputs: blinked! and count) or (outputs: message received)
 		if (xQueueReceive(msg_queue, &rcv_msg, 0) == pdTRUE) {
 			usartSendString(rcv_msg.body);
@@ -104,10 +105,6 @@ static void printTask(void *pvParameters) // print to the terminal
 					char* tail = userinput + cmd_len;
 					t = atoi(tail);
 					t = abs(t);
-					sprintf(str, "Delay set to: %d ms\r\n", t);
-					usartSendString(str); //echo char back to terminal
-
-					xQueueSend(delay_queue, &t, 10);
 
 					// Send integer to other task via queue
 					if (xQueueSend(delay_queue, &t, 10) != pdTRUE) {
@@ -124,8 +121,8 @@ static void printTask(void *pvParameters) // print to the terminal
 				usartSendChar(ch);
 			}
 		} 
+		vTaskDelay(50 / portTICK_PERIOD_MS ); //short delay to prevent task hogging CPU
 	}
-	
 }
 
 static void LEDTask(void *pvParameters) // print to the terminal
@@ -155,7 +152,7 @@ static void LEDTask(void *pvParameters) // print to the terminal
 		if(counter == 100)
 		{
 			msg.count = counter;
-			sprintf(msg.body, "blinked: \r\n");
+			sprintf(msg.body, "blinked: ");
 			xQueueSend(msg_queue, &msg, portMAX_DELAY);
 			counter = 0;
 		}
