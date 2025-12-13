@@ -52,6 +52,7 @@ int main(void)
 	delay_queue = xQueueCreate(delay_queue_len, sizeof(int)); //queue to hold delay times
 	msg_queue = xQueueCreate(msg_queue_len, sizeof(Message)); //queue to hold messages
 
+	//same priority so no higher priority task doesn't block the other
    	xTaskCreate(printTask, NULL, 256, NULL, 1, NULL);
 	xTaskCreate(LEDTask, NULL, 256, NULL, 1, NULL);
 		
@@ -60,21 +61,20 @@ int main(void)
 
 static void printTask(void *pvParameters) // print to the terminal
 {
-	//setup
-	Message rcv_msg;
-	int t;
-	char ch;
-	char userinput[buf_len];
-	uint8_t idx = 0;
-	uint8_t cmd_len = strlen(command);
-	char str[20];
+	Message rcv_msg; //stores received message from queue
+	int t; //delay time entered by user
+	char ch; //read in character
+	char userinput[buf_len]; //buffer to store user input
+	uint8_t idx = 0; //index for user input buffer
+	uint8_t cmd_len = strlen(command); //size of command string ("delay ")
+	char str[20]; //buffer to store value that is sent to msg_queue
 
 	// Clear whole buffer
   	memset(userinput, 0, buf_len);	
 	
 	while(1)
 	{
-		//read messages from msg_queue
+		//read messages from msg_queue (outputs: blinked! and count) or (outputs: message received)
 		if (xQueueReceive(msg_queue, &rcv_msg, 0) == pdTRUE) {
 			usartSendString(rcv_msg.body);
 			usartSendString("\n");
@@ -85,7 +85,6 @@ static void printTask(void *pvParameters) // print to the terminal
 		if(usartCharReceived())
 		{
 			ch = usartReadChar(); //read char from usart
-			usartSendString("all good so far\r\n");
 
 			// Store received character to buffer if not over buffer limit
 			if (idx < buf_len - 1) {
@@ -105,6 +104,10 @@ static void printTask(void *pvParameters) // print to the terminal
 					char* tail = userinput + cmd_len;
 					t = atoi(tail);
 					t = abs(t);
+					sprintf(str, "Delay set to: %d ms\r\n", t);
+					usartSendString(str); //echo char back to terminal
+
+					xQueueSend(delay_queue, &t, 10);
 
 					// Send integer to other task via queue
 					if (xQueueSend(delay_queue, &t, 10) != pdTRUE) {
