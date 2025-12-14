@@ -20,19 +20,19 @@ specified in the end of the video.
 #include<stdlib.h> //for atoi, abs
 
 /*-----------------------------------------------------------*/
-static void printTask(void *pvParameters); 
-static void LEDTask(void *pvParameters);
+static void printTask(void *pvParameters); //task that handles serial communications
+static void LEDTask(void *pvParameters); //task that blinks the led
 /*-----------------------------------------------------------*/
 
 /*-----------------------------------------------------------*/
 // Globals
-static QueueHandle_t delay_queue;
-static QueueHandle_t msg_queue;
+static QueueHandle_t delay_queue;	//carries delay values from print task to LED task
+static QueueHandle_t msg_queue;	//carries status messages from LED task to print task
 
-static const int msg_queue_len = 5;
-static const int delay_queue_len = 5; 
+static const int msg_queue_len = 5;	//length of message queue
+static const int delay_queue_len = 5; //length of delay queue
 static const uint8_t buf_len = 40; //length of buffer to store user input
-
+//status message structure
 typedef struct Message {
   char body[20];
   int count;
@@ -148,7 +148,7 @@ static void LEDTask(void *pvParameters)
 		//every 100 blinks send message to delay_queue
 		if(counter == 100)
 		{
-			msg.count = counter;
+			msg.count++;
 			sprintf(msg.body, "blinked: ");
 			xQueueSend(msg_queue, &msg, 10);
 			counter = 0;
