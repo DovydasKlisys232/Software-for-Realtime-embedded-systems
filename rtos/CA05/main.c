@@ -72,6 +72,7 @@ static void printTask(void *pvParameters) // print to the terminal
 	while(1)
 	{
 		vTaskDelay(10 / portTICK_PERIOD_MS ); //short delay to prevent task hogging CPU
+		
 		//read messages from msg_queue (outputs: blinked! and count) or (outputs: message received)
 		if (xQueueReceive(msg_queue, &rcv_msg, 0) == pdTRUE) {
 			usartSendString(rcv_msg.body);
@@ -80,6 +81,7 @@ static void printTask(void *pvParameters) // print to the terminal
 			usartSendString(str);
 		}
 
+		//if there is an input from usart
 		if(usartCharReceived())
 		{
 			ch = usartReadChar(); //read char from usart
@@ -121,7 +123,7 @@ static void printTask(void *pvParameters) // print to the terminal
 	}
 }
 
-static void LEDTask(void *pvParameters) // print to the terminal
+static void LEDTask(void *pvParameters) 
 {
 	//setup
 	DDRB |= (1<<2);	
@@ -138,7 +140,6 @@ static void LEDTask(void *pvParameters) // print to the terminal
 			xQueueSend(msg_queue, &msg, 10);
 		}
 		//blink led with delay time t
-		//ledblink(msg,counter,t);
 		PORTB |=  (1<<2); //LED on
 		vTaskDelay( t / portTICK_PERIOD_MS );
 		PORTB &= ~(1<<2); //LED off
