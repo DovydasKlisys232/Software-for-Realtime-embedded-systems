@@ -14,7 +14,6 @@ specified in the end of the video.
 #include "semphr.h"
 #include "usart.h" //usart library for serial comms
 
-#include<avr/interrupt.h> //for ISR
 #include<stdio.h> //for sprintf
 #include<string.h> //for strlen, memcmp
 #include<stdlib.h> //for atoi, abs
@@ -57,7 +56,7 @@ int main(void)
 	vTaskStartScheduler();    //This never returns... control handed to the RTOS
 }
 
-static void printTask(void *pvParameters) // print to the terminal
+static void printTask(void *pvParameters) // handles serial I/O and command parsing
 {
 	Message rcv_msg; //stores received message from queue
 	int t; //delay time entered by user
@@ -66,14 +65,14 @@ static void printTask(void *pvParameters) // print to the terminal
 	uint8_t idx = 0; //index for user input buffer
 	char str[20]; //buffer to store value that is sent to msg_queue
 
-	// Clear whole buffer
+	// Clear whole buffer 
   	memset(userinput, 0, buf_len);	
 	
 	while(1)
 	{
 		vTaskDelay(10 / portTICK_PERIOD_MS ); //short delay to prevent task hogging CPU
 		
-		//read messages from msg_queue (outputs: blinked! and count) or (outputs: message received)
+		//read messages from msg_queue if ready
 		if (xQueueReceive(msg_queue, &rcv_msg, 0) == pdTRUE) {
 			usartSendString(rcv_msg.body);
 			usartSendString("\n");
@@ -123,7 +122,7 @@ static void printTask(void *pvParameters) // print to the terminal
 	}
 }
 
-static void LEDTask(void *pvParameters) 
+static void LEDTask(void *pvParameters) // blinks the led and sends status messages to print task
 {
 	//setup
 	DDRB |= (1<<2);	
