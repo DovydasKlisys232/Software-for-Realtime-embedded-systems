@@ -50,12 +50,10 @@ int main()
     // mask the mantissa bits (bits 0-22) to get standard mantissa, the fractional part without leading 1.
     union myUnion z5;
     z5.myUnsignedInt = z.myUnsignedInt & 0x007FFFFF;
-    fprintf(stdout,"The normalised mantissa is: %u\n", z5.myUnsignedInt);
+    fprintf(stdout,"The normalised mantissa is: 0.%u\n", z5.myUnsignedInt);
 
     // Print out the normalised mantissa of the number with the implied one at the beginning.
-    union myUnion z6;
-    z6.myFloat = z.myFloat / pow(2.0, z4.myFloat); // divide the float by 2 raised to the power of the unbiased exponent to get the normalised mantissa with the implied leading 1.
-    fprintf(stdout,"The normalised mantissa with the implied one is: %f\n", z6.myFloat);
+    fprintf(stdout,"The normalised mantissa with the implied one is: 1.%u\n", z5.myUnsignedInt);
 
     return 0;
 }
